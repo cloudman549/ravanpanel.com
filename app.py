@@ -42,9 +42,9 @@ def auto_delete_expired_licenses():
                     licenses_col.delete_one({"key": lic["key"]})
 
 def auto_delete_old_screenshots():
-    cutoff = datetime.now() - timedelta(hours=6)
+    cutoff = datetime.now() - timedelta(hours=12)
     result = screenshots_col.delete_many({"upload_time": {"$lt": cutoff}})
-    print(f"[DEBUG] Deleted {result.deleted_count} screenshots older than 6 hours")
+    print(f"[DEBUG] Deleted {result.deleted_count} screenshots older than 12 hours")
 
 @app.before_request
 def before_request():
@@ -424,31 +424,71 @@ def download_today_screenshots():
     
     pdf_buffer = BytesIO()
     c = canvas.Canvas(pdf_buffer, pagesize=letter)
-    width, height = letter  # Page size: 612x792 points
+    page_width, page_height = letter  # Page size: 612x792 points
+    margin = 1  # Margin around the images (1px)
+    img_spacing = 1  # Spacing between images (1px)
+    images_per_row = 4  # Number of images per row
 
-    for s in screenshots:
+    # Calculate maximum image width
+    max_img_width = (page_width - (images_per_row + 1) * margin) / images_per_row
+
+    # Estimate aspect ratio from the first image
+    if screenshots:
         try:
-            img_data = base64.b64decode(s['image_data'])
+            img_data = base64.b64decode(screenshots[0]['image_data'])
             img_io = BytesIO(img_data)
             img = Image.open(img_io)
-            img_reader = ImageReader(img_io)
-            
-            # Scale image to fit page
-            img_width, img_height = img.size
-            aspect = img_height / float(img_width)
-            if img_width > width or img_height > height:
-                if aspect > 1:
-                    img_width = width - 40
-                    img_height = img_width * aspect
-                else:
-                    img_height = height - 40
-                    img_width = img_height / aspect
-            
-            c.drawImage(img_reader, 20, height - img_height - 20, width=img_width, height=img_height)
-            c.showPage()  # New page for each image
-        except Exception as e:
-            print(f"[DEBUG] Error adding image to PDF: {e}")
-            continue
+            aspect = img.size[1] / float(img.size[0])  # height / width
+        except:
+            aspect = 0.75  # Default aspect if error
+    else:
+        aspect = 0.75
+
+    max_img_height = max_img_width * aspect
+
+    # Calculate how many rows fit on a page
+    rows_per_page = int((page_height - 2 * margin) / (max_img_height + img_spacing))
+
+    # Process screenshots
+    img_index = 0
+    while img_index < len(screenshots):
+        for row in range(rows_per_page):
+            if img_index >= len(screenshots):
+                break
+            for col in range(images_per_row):
+                if img_index >= len(screenshots):
+                    break
+                s = screenshots[img_index]
+                try:
+                    img_data = base64.b64decode(s['image_data'])
+                    img_io = BytesIO(img_data)
+                    img = Image.open(img_io)
+                    img_reader = ImageReader(img_io)
+                    
+                    # Get original aspect
+                    img_width, img_height = img.size
+                    aspect = img_height / float(img_width)
+                    
+                    # Scale to max
+                    draw_width = max_img_width
+                    draw_height = draw_width * aspect
+                    
+                    # If height exceeds, scale based on height
+                    if draw_height > max_img_height:
+                        draw_height = max_img_height
+                        draw_width = draw_height / aspect
+                    
+                    # Position
+                    x_position = margin + col * (max_img_width + img_spacing)
+                    y_position = page_height - margin - row * (max_img_height + img_spacing) - draw_height
+                    
+                    c.drawImage(img_reader, x_position, y_position, width=draw_width, height=draw_height)
+                except Exception as e:
+                    print(f"[DEBUG] Error adding image to PDF: {e}")
+                    continue
+                img_index += 1
+        if img_index < len(screenshots):
+            c.showPage()
     
     c.save()
     pdf_buffer.seek(0)
