@@ -1,6 +1,6 @@
-numpy<2
-matplotlib
-Pillow
-Flask
-Flask-Cors
+flask
 pymongo
+getmac
+flask-cors
+Pillow
+reportlab==4.0.4

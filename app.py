@@ -6,12 +6,10 @@ from flask_cors import CORS
 import base64
 from io import BytesIO
 from PIL import Image
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 import os
-import matplotlib
-matplotlib.use('Agg')
-
 
 app = Flask(__name__)
 CORS(app)
@@ -377,6 +375,7 @@ def upload_screenshot():
     
     # SIMPLE RESPONSE - no extra details
     return jsonify({"success": True, "message": "Screenshot uploaded"}), 200
+
 @app.route('/api/today_screenshots')
 def get_today_screenshots():
     if not session.get('admin'):
@@ -424,21 +423,34 @@ def download_today_screenshots():
         return jsonify({"success": False, "message": "No screenshots today"}), 404
     
     pdf_buffer = BytesIO()
-    with PdfPages(pdf_buffer) as pdf:
-        for s in screenshots:
-            try:
-                img_data = base64.b64decode(s['image_data'])
-                img_io = BytesIO(img_data)
-                img = Image.open(img_io)
-                fig, ax = plt.subplots(figsize=(img.width / 100, img.height / 100))  # Adjust figure size to image dimensions
-                ax.imshow(img)
-                ax.axis('off')
-                pdf.savefig(fig, bbox_inches='tight')
-                plt.close(fig)
-            except Exception as e:
-                print(f"[DEBUG] Error adding image to PDF: {e}")
-                continue
+    c = canvas.Canvas(pdf_buffer, pagesize=letter)
+    width, height = letter  # Page size: 612x792 points
+
+    for s in screenshots:
+        try:
+            img_data = base64.b64decode(s['image_data'])
+            img_io = BytesIO(img_data)
+            img = Image.open(img_io)
+            img_reader = ImageReader(img_io)
+            
+            # Scale image to fit page
+            img_width, img_height = img.size
+            aspect = img_height / float(img_width)
+            if img_width > width or img_height > height:
+                if aspect > 1:
+                    img_width = width - 40
+                    img_height = img_width * aspect
+                else:
+                    img_height = height - 40
+                    img_width = img_height / aspect
+            
+            c.drawImage(img_reader, 20, height - img_height - 20, width=img_width, height=img_height)
+            c.showPage()  # New page for each image
+        except Exception as e:
+            print(f"[DEBUG] Error adding image to PDF: {e}")
+            continue
     
+    c.save()
     pdf_buffer.seek(0)
     print("[DEBUG] Sending PDF with", len(screenshots), "screenshots")
     return send_file(pdf_buffer, as_attachment=True, download_name=f"screenshots_{datetime.now().strftime('%Y%m%d')}.pdf", mimetype='application/pdf')
