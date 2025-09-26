@@ -231,7 +231,7 @@
                     <i class="fas fa-download"></i>
                 </button>
                 <div class="modal-header">
-                    <h5 class="modal-title">📸 Today's RAVAN RESULT</h5>
+                    <h5 class="modal-title"> RAVAN RESULT</h5>
                 </div>
                 <div class="modal-body">
                     <div id="screenshotsList" class="screenshots-grid"></div>
@@ -266,7 +266,7 @@
                     if (data.success) {
                         if (data.screenshots.length === 0) {
                             console.log('[DEBUG] No screenshots found');
-                            container.innerHTML = '<p class="text-center text-muted">No screenshots uploaded today.</p>';
+                            container.innerHTML = '<p class="text-center text-muted">RAVAN RESULT.....</p>';
                         } else {
                             console.log('[DEBUG] Rendering', data.screenshots.length, 'screenshots');
                             data.screenshots.forEach(screenshot => {
