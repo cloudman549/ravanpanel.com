@@ -21,6 +21,15 @@ db = client["license_db"]
 sellers_col = db["sellers"]
 licenses_col = db["licenses"]
 screenshots_col = db["screenshots"]
+configs_col = db["configs"]
+
+# ------------------ Config helpers ------------------
+def get_config():
+    config = configs_col.find_one({"_id": "links"})
+    if not config:
+        config = {"_id": "links", "download_url": "", "autolauncher_url": ""}
+        configs_col.insert_one(config)
+    return config
 
 # ------------------ Helper ------------------
 def get_mac_address():
@@ -54,7 +63,8 @@ def before_request():
 # ------------------ Routes ------------------
 @app.route('/')
 def home():
-    return render_template("login.html")
+    config = get_config()
+    return render_template("login.html", config=config)
 
 # ------------------ Admin ------------------
 @app.route('/admin/login', methods=['POST'])
@@ -64,7 +74,7 @@ def admin_login():
     if username == "ADMINRAVAN" and password == "ADMINRAVAN1":
         session['admin'] = True
         return redirect('/admin')
-    return render_template("login.html", message="Invalid Admin Credentials")
+    return render_template("login.html", message="Invalid Admin Credentials", config=get_config())
 
 @app.route('/admin')
 def admin_panel():
@@ -85,7 +95,20 @@ def admin_panel():
             "due": due
         }
     message = request.args.get("message")
-    return render_template("admin_panel.html", sellers=sellers, seller_stats=seller_stats, message=message)
+    return render_template("admin_panel.html", sellers=sellers, seller_stats=seller_stats, message=message, config=get_config())
+
+@app.route('/admin/update_links', methods=['POST'])
+def update_links():
+    if not session.get('admin'):
+        return redirect('/')
+    download_url = request.form.get('download_url', '').strip()
+    autolauncher_url = request.form.get('autolauncher_url', '').strip()
+    configs_col.update_one(
+        {"_id": "links"},
+        {"$set": {"download_url": download_url, "autolauncher_url": autolauncher_url}},
+        upsert=True
+    )
+    return redirect('/admin?message=Links updated successfully')
 
 @app.route('/admin/create_seller', methods=['POST'])
 def create_seller():
@@ -154,7 +177,7 @@ def seller_login():
     if seller:
         session['seller'] = username
         return redirect('/seller')
-    return render_template("login.html", message="Invalid seller credentials or deactivated.")
+    return render_template("login.html", message="Invalid seller credentials or deactivated.", config=get_config())
 
 @app.route('/seller')
 def seller_panel():
@@ -226,10 +249,10 @@ def user_login():
     lic = licenses_col.find_one({"key": key, "active": True})
 
     if not lic:
-        return render_template("login.html", message="Invalid license key or deactivated.")
+        return render_template("login.html", message="Invalid license key or deactivated.", config=get_config())
 
     if not lic.get("paid"):
-        return render_template("login.html", message="License key is unpaid. Contact seller.")
+        return render_template("login.html", message="License key is unpaid. Contact seller.", config=get_config())
 
     session['user'] = key
 

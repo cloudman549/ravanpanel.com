@@ -131,6 +131,13 @@
 </head>
 <body>
     <div class="panel">
+        <!-- Update Links button - top right corner -->
+        <div style="position: fixed; top: 15px; right: 15px; z-index: 999;">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateLinksModal">
+                <i class="fas fa-link"></i> Update Links
+            </button>
+        </div>
+
         <h3 class="text-center mb-4">🛡️ Admin Panel</h3>
 
         {% if message %}
@@ -236,6 +243,34 @@
                 <div class="modal-body">
                     <div id="screenshotsList" class="screenshots-grid"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Update Links -->
+    <div class="modal fade" id="updateLinksModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🔗 Update Links</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/admin/update_links">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Download URL</label>
+                            <input type="text" name="download_url" class="form-control" value="{{ config.get('download_url', '') }}" placeholder="https://..." />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">RAVAN Autolauncher URL</label>
+                            <input type="text" name="autolauncher_url" class="form-control" value="{{ config.get('autolauncher_url', '') }}" placeholder="https://..." />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Save</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

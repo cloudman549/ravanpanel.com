@@ -140,11 +140,11 @@
 
       <button type="submit" class="btn btn-primary w-100 mb-2">Login</button>
 
-      <a href="https://gofile.io/d/v02h2a" class="btn btn-download w-100 color: #00c621ff" download>
-         NEW VERSION ZIP
+      <a href="{{ config.get('download_url', '') }}" class="btn btn-download w-100 color: #00c621ff" download>
+         DOWNLOAD
       </a>
-      <a href="https://gofile.io/d/nvwsEQ" class="btn btn-download w-100" download>
-         RAVAN AUTOLAUNCHER FOR (vps user)
+      <a href="{{ config.get('autolauncher_url', '') }}" class="btn btn-download w-100" download>
+         RAVAN AUTOLAUNCHER 
       </a>
       
     </form>
